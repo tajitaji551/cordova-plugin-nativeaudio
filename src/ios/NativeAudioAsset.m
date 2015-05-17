@@ -52,7 +52,7 @@ static const CGFloat FADE_DELAY = 0.08;
         [player stop];
     }
     // set currentTime to startTime
-    [player setCurrentTime:startTime];
+    [player setCurrentTime:startTime.doubleValue];
     player.numberOfLoops = 0;
     [player play];
     // stop after duration time
