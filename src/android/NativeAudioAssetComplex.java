@@ -15,6 +15,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnPreparedListener;
+import android.os.Handler;
 
 public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletionListener {
 
@@ -40,21 +41,45 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 		mp.setVolume(volume, volume);
 		mp.prepare();
 	}
+    
+    /**
+     * リソース直指定用
+     */
+    public NativeAudioAssetComplex(String path, float volume) throws IOException {
+        state = INVALID;
+        mp = new MediaPlayer();
+        mp.setOnCompletionListener(this);
+        mp.setOnPreparedListener(this);
+        mp.setDataSource(path);
+        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mp.setVolume(volume, volume);
+        mp.prepare();
+    }
 	
 	public void play(Callable<Void> completeCb) throws IOException
 	{
         completeCallback = completeCb;
-		invokePlay( false );
+		invokePlay(0, 1, false);
 	}
+    
+    /**
+     * 再生開始時間と再生時間指定
+     * @param startTime millis
+     * @param duration millis
+     */
+    public void play(int startTime, int duration, Callable<Void> completeCb) throws IOException {
+        completeCallback = completeCb;
+        invokePlay(startTime, duration, false);
+    }
 	
-	private void invokePlay( Boolean loop )
+	private void invokePlay(int startTime, int duration, Boolean loop)
 	{
 		Boolean playing = ( mp.isLooping() || mp.isPlaying() );
 		if ( playing )
 		{
 			mp.pause();
 			mp.setLooping(loop);
-			mp.seekTo(0);
+			mp.seekTo((int) startTime);
 			mp.start();
 		}
 		if ( !playing && state == PREPARED )
@@ -68,18 +93,26 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 			mp.setLooping(loop);
 			mp.start();
 		}
+        // duration後に停止
+        new Handler().postDelayed(new Runnable() {
+            public void run() {
+                if (mp.isPlaying()) {
+                    mp.pause();
+                }
+            }
+        }, duration);
 	}
 
 	public boolean pause()
 	{
 		try
 		{
-    				if ( mp.isLooping() || mp.isPlaying() )
-				{
-					mp.pause();
-					return true;
-				}
-        	}
+            if ( mp.isLooping() || mp.isPlaying() )
+            {
+                mp.pause();
+                return true;
+            }
+        }
 		catch (IllegalStateException e)
 		{
 		// I don't know why this gets thrown; catch here to save app
@@ -101,29 +134,29 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 				state = INVALID;
 				mp.pause();
 				mp.seekTo(0);
-	           	}
+            }
 		}
-	        catch (IllegalStateException e)
-	        {
-            // I don't know why this gets thrown; catch here to save app
-	        }
+        catch (IllegalStateException e)
+        {
+        // I don't know why this gets thrown; catch here to save app
+        }
 	}
 
 	public void setVolume(float volume) 
 	{
-	        try
-	        {
-			mp.setVolume(volume,volume);
-            	}
-            	catch (IllegalStateException e) 
+        try
+        {
+            mp.setVolume(volume,volume);
+        }
+        catch (IllegalStateException e)
 		{
-                // I don't know why this gets thrown; catch here to save app
+            // I don't know why this gets thrown; catch here to save app
 		}
 	}
 	
 	public void loop() throws IOException
 	{
-		invokePlay( true );
+		invokePlay(0, 1, true);
 	}
 	
 	public void unload() throws IOException

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
+import java.io.File;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -70,16 +71,21 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 				} else {
 					voices = data.getInt(3);
 				}
-
-				String fullPath = "www/".concat(assetPath);
-
-				Context ctx = cordova.getActivity().getApplicationContext();
-				AssetManager am = ctx.getResources().getAssets();
-				AssetFileDescriptor afd = am.openFd(fullPath);
-
-				NativeAudioAsset asset = new NativeAudioAsset(
-						afd, voices, (float)volume);
-				assetMap.put(audioID, asset);
+                
+                NativeAudioAsset asset = null;
+                // ファイルが存在するならフルパスで指定
+                File file = new File(assetPath);
+                if (!file.exists()) {
+                    String fullPath = "www/".concat(assetPath);
+                    Context ctx = cordova.getActivity().getApplicationContext();
+                    AssetManager am = ctx.getResources().getAssets();
+                    AssetFileDescriptor afd = am.openFd(fullPath);
+                    asset = new NativeAudioAsset(afd, voices, (float)volume);
+				
+                } else {
+                    asset = new NativeAudioAsset(assetPath, voices, (float)volume);
+                }
+                if (asset != null) assetMap.put(audioID, asset);
 
 				return new PluginResult(Status.OK);
 			} else {
@@ -93,17 +99,21 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 	}
 	
 	private PluginResult executePlayOrLoop(String action, JSONArray data) {
-		final String audioID;
+		final String audioID, startTime, duration;
 		try {
 			audioID = data.getString(0);
 			//Log.d( LOGTAG, "play - " + audioID );
+            startTime = data.getString(1);
+            duration = data.getString(2);
 
 			if (assetMap.containsKey(audioID)) {
 				NativeAudioAsset asset = assetMap.get(audioID);
 				if (LOOP.equals(action))
 					asset.loop();
 				else
-					asset.play(new Callable<Void>() {
+					asset.play(Integer.parseInt(startTime),
+                               Integer.parseInt(duration),
+                               new Callable<Void>() {
                         public Void call() throws Exception {
                             CallbackContext callbackContext = completeCallbacks.get(audioID);
                             if (callbackContext != null) {

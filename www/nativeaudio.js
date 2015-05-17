@@ -33,11 +33,11 @@ module.exports  = {
         return cordova.exec(successCallback, errorCallback, "NativeAudio", "preloadComplex", [id, assetPath, parseFloat(volume), voices, parseFloat(delay)]);
     },
 
-    play: function(id, successCallback, errorCallback, completeCallback) {
+    play: function(id, startTime, duration, successCallback, errorCallback, completeCallback) {
         if(typeof completeCallback === "function") {
-        	cordova.exec(completeCallback, errorCallback, "NativeAudio", "addCompleteListener", [id]);    
+        	cordova.exec(completeCallback, errorCallback, "NativeAudio", "addCompleteListener", [id, parseFloat(startTime), parseFloat(duration)]);    
         }
-        return cordova.exec(successCallback, errorCallback, "NativeAudio", "play", [id]);
+        return cordova.exec(successCallback, errorCallback, "NativeAudio", "play", [id, parseFloat(startTime), parseFloat(duration)]);
         
     },
 

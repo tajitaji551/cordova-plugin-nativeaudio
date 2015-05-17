@@ -32,11 +32,29 @@ public class NativeAudioAsset
 			voices.add( voice );
 		}
 	}
+    
+    /**
+     * フルパス指定
+     * @param path フルパス指定
+     */
+    public NativeAudioAsset(String path, int numVoices, float volume) throws IOException
+    {
+        voices = new ArrayList<NativeAudioAssetComplex>();
+        
+        if ( numVoices < 0 )
+            numVoices = 1;
+        
+        for ( int x=0; x<numVoices; x++)
+        {
+            NativeAudioAssetComplex voice = new NativeAudioAssetComplex(path, volume);
+            voices.add( voice );
+        }
+    }
 	
-	public void play(Callable<Void> completeCb) throws IOException
+	public void play(int startTime, int duration, Callable<Void> completeCb) throws IOException
 	{
 		NativeAudioAssetComplex voice = voices.get(playIndex);
-		voice.play(completeCb);
+		voice.play(startTime, duration, completeCb);
 		playIndex++;
 		playIndex = playIndex % voices.size();
 	}

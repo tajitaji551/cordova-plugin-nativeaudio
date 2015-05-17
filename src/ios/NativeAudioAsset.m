@@ -44,12 +44,23 @@ static const CGFloat FADE_DELAY = 0.08;
     return(self);
 }
 
-- (void) play
+- (void)play:(NSNumber *)startTime duration:(NSNumber *)duration
 {
     AVAudioPlayer * player = [voices objectAtIndex:playIndex];
-    [player setCurrentTime:0.0];
+    // if isPlayer==YES then stop
+    if (player.isPlaying) {
+        [player stop];
+    }
+    // set currentTime to startTime
+    [player setCurrentTime:startTime];
     player.numberOfLoops = 0;
     [player play];
+    // stop after duration time
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration.floatValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (player.isPlaying) {
+            [player stop];
+        }
+    });
     playIndex += 1;
     playIndex = playIndex % [voices count];
 }

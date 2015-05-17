@@ -62,7 +62,8 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     [self.commandDelegate runInBackground:^{
         if (existingReference == nil) {
 
-            NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
+//            NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
+            NSString *basePath = [[NSBundle mainBundle] resourcePath];
             NSString* path = [NSString stringWithFormat:@"%@", assetPath];
             NSString* pathFromWWW = [NSString stringWithFormat:@"%@/%@", basePath, assetPath];
 
@@ -178,6 +179,8 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSString *callbackId = command.callbackId;
     NSArray* arguments = command.arguments;
     NSString *audioID = [arguments objectAtIndex:0];
+    NSNumber *startTime = [arguments objectAtIndex:1];
+    NSNumber *duration = [arguments objectAtIndex:2];
 
     [self.commandDelegate runInBackground:^{
         if (audioMapping) {
@@ -187,8 +190,8 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
             if (asset != nil){
                 if ([asset isKindOfClass:[NativeAudioAsset class]]) {
                     NativeAudioAsset *_asset = (NativeAudioAsset*) asset;
-                    // Music assets are faded in
-                    [_asset playWithFade];
+                    // play at startTime within duration
+                    [_asset play:startTime duration:duration];
 
                     NSString *RESULT = [NSString stringWithFormat:@"%@ (%@)", INFO_PLAYBACK_PLAY, audioID];
                     [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: RESULT] callbackId:callbackId];
