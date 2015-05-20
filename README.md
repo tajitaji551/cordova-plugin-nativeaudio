@@ -126,13 +126,15 @@ Change the float-based **delay** parameter to increase the fade-in/fade-out timi
  * errorCallback - error callback function
 
 ```javascript
-play: function (id, successCallback, errorCallback, completeCallback)
+play: function (id, startTime, duration, successCallback, errorCallback, completeCallback)
 ```
 
 Plays an audio asset.
 
 * params:
  * id - string unique ID for the audio file
+ * startTime - setCurrentTime
+ * duration - how long to play
  * successCallback - success callback function
  * errorCallback - error callback function
  * completeCallback - error callback function
