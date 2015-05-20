@@ -150,7 +150,7 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
             NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
             NSString* path = [NSString stringWithFormat:@"%@/%@", basePath, assetPath];
 
-            if ([[NSFileManager defaultManager] fileExistsAtPath : path]) {
+            if ([[NSFileManager defaultManager] fileExistsAtPath : assetPath]) {
                 NativeAudioAsset* asset = [[NativeAudioAsset alloc] initWithPath:assetPath
                                                                       withVoices:voices
                                                                       withVolume:volume
@@ -160,7 +160,6 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
 
                 NSString *RESULT = [NSString stringWithFormat:@"%@ (%@)", INFO_ASSET_LOADED, audioID];
                 [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: RESULT] callbackId:callbackId];
-
             } else if ([[NSFileManager defaultManager] fileExistsAtPath: path]) {
                 NativeAudioAsset* asset = [[NativeAudioAsset alloc] initWithPath:path
                                                                       withVoices:voices
