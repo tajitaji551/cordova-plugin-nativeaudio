@@ -72,14 +72,14 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         invokePlay(startTime, duration, false);
     }
 	
-	private void invokePlay(int startTime, int duration, Boolean loop)
+	private void invokePlay(float startTime, float duration, Boolean loop)
 	{
 		Boolean playing = ( mp.isLooping() || mp.isPlaying() );
 		if ( playing )
 		{
 			mp.pause();
 			mp.setLooping(loop);
-			mp.seekTo((int) startTime);
+			mp.seekTo((int) (startTime * 1000));
 			mp.start();
 		}
 		if ( !playing && state == PREPARED )
@@ -94,13 +94,13 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 			mp.start();
 		}
         // duration後に停止
-        new Handler().postDelayed(new Runnable() {
-            public void run() {
-                if (mp.isPlaying()) {
-                    mp.pause();
-                }
-            }
-        }, duration);
+        if (duration < 0) {
+	        new Handler(NativeAudio.stopThread.getLooper()).postDelayed(new Runnable() {
+	            public void run() {
+	                pause();
+	            }
+	        }, (long) (duration * 1000));
+    	}
 	}
 
 	public boolean pause()
@@ -110,6 +110,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
             if ( mp.isLooping() || mp.isPlaying() )
             {
                 mp.pause();
+                mp.seekTo(0);
                 return true;
             }
         }

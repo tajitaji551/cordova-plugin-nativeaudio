@@ -22,6 +22,7 @@ import android.content.res.AssetManager;
 import android.media.AudioManager;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.os.HandlerThread;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -49,10 +50,14 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 	private static HashMap<String, NativeAudioAsset> assetMap;
     private static ArrayList<NativeAudioAsset> resumeList;
     private static HashMap<String, CallbackContext> completeCallbacks;
+    public static HandlerThread stopThread = new HandlerThread("STOP-AUDIO-THREAD");
 
 	private PluginResult executePreload(JSONArray data) {
 		String audioID;
 		try {
+			if (!stopThread.isAlive()) {
+				stopThread.start();
+			}
 			audioID = data.getString(0);
 			if (!assetMap.containsKey(audioID)) {
 				String assetPath = data.getString(1);
