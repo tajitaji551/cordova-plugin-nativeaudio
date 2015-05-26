@@ -51,7 +51,7 @@ public class NativeAudioAsset
         }
     }
 	
-	public void play(int startTime, int duration, Callable<Void> completeCb) throws IOException
+	public void play(float startTime, float duration, Callable<Void> completeCb) throws IOException
 	{
 		NativeAudioAssetComplex voice = voices.get(playIndex);
 		voice.play(startTime, duration, completeCb);

@@ -59,7 +59,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	public void play(Callable<Void> completeCb) throws IOException
 	{
         completeCallback = completeCb;
-		invokePlay(0, 1, false);
+		invokePlay(0f, 1f, false);
 	}
     
     /**
@@ -67,7 +67,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
      * @param startTime millis
      * @param duration millis
      */
-    public void play(int startTime, int duration, Callable<Void> completeCb) throws IOException {
+    public void play(float startTime, float duration, Callable<Void> completeCb) throws IOException {
         completeCallback = completeCb;
         invokePlay(startTime, duration, false);
     }
@@ -94,7 +94,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 			mp.start();
 		}
         // duration後に停止
-        if (duration < 0) {
+        if (duration > 0) {
 	        new Handler(NativeAudio.stopThread.getLooper()).postDelayed(new Runnable() {
 	            public void run() {
 	                pause();
