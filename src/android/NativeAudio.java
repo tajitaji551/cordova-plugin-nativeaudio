@@ -81,6 +81,9 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
                 // ファイルが存在するならフルパスで指定
                 File file = new File(assetPath);
                 if (!file.exists()) {
+                	if (assetPath.indexOf("./") >= 0) {
+                		assetPath = assetPath.replace("./", "");
+                	}
                     String fullPath = "www/".concat(assetPath);
                     Context ctx = cordova.getActivity().getApplicationContext();
                     AssetManager am = ctx.getResources().getAssets();
