@@ -193,7 +193,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	{
 		if (state != LOOPING)
 		{
-			this.state = INVALID;
+			this.state = PREPARED;
 			try {
 				this.stop();
                 completeCallback.call();
