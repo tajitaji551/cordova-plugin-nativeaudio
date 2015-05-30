@@ -25,8 +25,9 @@ import android.view.KeyEvent;
 import android.os.HandlerThread;
 import android.media.SoundPool;
 import android.media.SoundPool.OnLoadCompleteListener;
-import android.media.SoundPool.Builder;
 import android.media.AudioAttributes;
+import android.os.Build;
+import android.annotation.TargetApi;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -50,17 +51,26 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
     public static final String ADD_COMPLETE_LISTENER="addCompleteListener";
 	public static final String SET_VOLUME_FOR_COMPLEX_ASSET="setVolumeForComplexAsset";
 
+	// Set stream count for SoundPool up to 10
+	public static final int STREAM_COUNT = 10;
+
 	private static final String LOGTAG = "NativeAudio";
 	
 	private static HashMap<String, NativeAudioAsset> assetMap;
     private static ArrayList<NativeAudioAsset> resumeList;
     private static HashMap<String, CallbackContext> completeCallbacks;
+    // To hold loaded sound source id
     private static HashMap<String, Integer> soundMap;
-    private static HashMap<Integer, String> waitingMap; // 読み込み待ち
+    // To hold loading sound source id
+    private static HashMap<Integer, String> waitingMap;
+    // SoundPool instance
     private static SoundPool soundPool;
     public static HandlerThread stopThread = new HandlerThread("STOP-AUDIO-THREAD");
 
-    // preloadSimple
+    /**
+     * 2015/05/30 by Kawamura
+     * Let preloadSimple function to use SoundPool.
+     */
     private PluginResult execPreloadSimple(JSONArray data) {
     	String audioID;
     	try {
@@ -84,15 +94,22 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 				}
 
                 // ファイルが存在するならフルパスで指定
+                int id = -1;
                 File file = new File(assetPath);
                 if (!file.exists()) {
                 	if (assetPath.indexOf("./") >= 0) {
                 		assetPath = assetPath.replace("./", "");
                 	}
-                    assetPath = "www/".concat(assetPath);
+                    String fullPath = "www/".concat(assetPath);
+                    Context ctx = cordova.getActivity().getApplicationContext();
+                    AssetManager am = ctx.getResources().getAssets();
+                    AssetFileDescriptor afd = am.openFd(fullPath);
+	                id = soundPool.load(afd, 0);
+                    waitingMap.put(id, audioID); // waiting loading. if load success replace by soundId
+                } else {
+					id = soundPool.load(assetPath, 0);
+                    waitingMap.put(id, audioID); // waiting loading. if load success replace by soundId
                 }
-                int id = soundPool.load(assetPath, 0);
-                waitingMap.put(id, audioID); // waiting loading. if load success replace by soundId
                 file = null;
 
 				return new PluginResult(Status.OK);
@@ -106,7 +123,12 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 		}		
     }
 
+    /**
+     * 2015/05/30 by Kawamura
+     * SoundPool callback
+     */
     public void onLoadComplete (SoundPool soundPool, int sampleId, int status) {
+//    	Log.d(LOGTAG, "onLoadComplete ID:" + sampleId + " status:" + status + " isWaiting:" + waitingMap.containsKey(sampleId));
     	// success
     	if (status == 0 && waitingMap.containsKey(sampleId)) {
     		String audioKey = (String) waitingMap.get(sampleId);
@@ -123,7 +145,6 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			audioID = data.getString(0);
 			if (!assetMap.containsKey(audioID)) {
 				String assetPath = data.getString(1);
-				Log.d(LOGTAG, "preloadComplex - " + audioID + ": " + assetPath);
 				
 				double volume;
 				if (data.length() <= 2) {
@@ -170,14 +191,16 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 	}
 	
 	private PluginResult executePlayOrLoop(String action, JSONArray data) {
-		final String audioID, startTime, duration;
+		final String audioID;
 		try {
 			audioID = data.getString(0);
-			//Log.d( LOGTAG, "play - " + audioID );
-            startTime = data.getString(1);
-            duration = data.getString(2);
 
 			if (assetMap.containsKey(audioID)) {
+				String startTime = "0", duration = "1";
+				if (data.length() > 1) {
+		            startTime = data.getString(1);
+		            duration = data.getString(2);
+				}
 				NativeAudioAsset asset = assetMap.get(audioID);
 				if (LOOP.equals(action))
 					asset.loop();
@@ -196,7 +219,7 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
                         }
                     });
 			} else {
-				// soundMapを検索
+				// Search soundMap
 				if (soundMap.containsKey(audioID)) {
 					int status = soundPool.play((int) soundMap.get(audioID), 1.0f, 1.0f, 5, 0, 1.0f);
 					// status == 0 is fail
@@ -225,6 +248,8 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			if (assetMap.containsKey(audioID)) {
 				NativeAudioAsset asset = assetMap.get(audioID);
 				asset.stop();
+			} else if (soundMap.containsKey(audioID)) {
+				soundPool.stop((int) soundMap.get(audioID));
 			} else {
 				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
 			}			
@@ -244,6 +269,9 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			if (soundMap.containsKey(audioID)) {
 				if (!soundPool.unload((int) soundMap.get(audioID))) {
 					return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+				}
+				synchronized (soundMap) {
+					soundMap.remove(audioID);
 				}
 			} else {
 				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
@@ -275,6 +303,8 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			if (assetMap.containsKey(audioID)) {
 				NativeAudioAsset asset = assetMap.get(audioID);
 				asset.setVolume(volume);
+			} else if (soundMap.containsKey(audioID)) {
+				soundPool.setVolume((int) soundMap.get(audioID), (float) volume, (float) volume);
 			} else {
 				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
 			}
@@ -380,11 +410,17 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 		if (soundMap == null) {
 			soundMap = new HashMap<String, Integer>();
 			waitingMap = new HashMap<Integer, String>();
-			soundPool = new SoundPool.Builder().setMaxStreams(10)
-							.setAudioAttributes(new AudioAttributes.Builder()
-								.setUsage(AudioAttributes.USAGE_GAME)
-								.build())
-							.build();
+			// Init SoundPool instance
+			Log.d(LOGTAG, "[SDK VERSION]:" + Build.VERSION.SDK_INT);
+			Log.d(LOGTAG, "[LOLLIPOP VERSION]:" + Build.VERSION_CODES.LOLLIPOP);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				initSoundPoolInstanceForRecent(soundPool, STREAM_COUNT);
+			} else {
+				initSoundPoolInstanceForOlder(soundPool, STREAM_COUNT);
+			}
+			if (soundPool != null) {
+				soundPool.setOnLoadCompleteListener(this);
+			}
 		}
 
         if (resumeList == null) {
@@ -395,6 +431,47 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 		if (!stopThread.isAlive()) {
 			stopThread.start();
 		}
+	}
+
+	/**
+	 * 2015/05/30 by Kawamura
+	 * Create SoundPool instance for LOLIPOP or later.
+	 */
+	@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+	private SoundPool createSoundPoolForRecent(SoundPool sp, int streamCount) {
+		Log.d("Sound", "Initialize Audio Attributes.");
+        // Initialize AudioAttributes.
+        AudioAttributes attributes = new android.media.AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+        Log.d("Sound", "Set AudioAttributes for SoundPool.");
+        // Set the audioAttributes for the SoundPool and specify maximum number of streams.
+        soundPool = new SoundPool.Builder()
+                .setAudioAttributes(attributes)
+                .setMaxStreams(streamCount)
+                .build();
+
+        return soundPool;
+	}
+
+	/**
+	 * 2015/05/30 by Kawamura
+	 * Create SoundPool instance for older version than LOLIPOP.
+	 */
+	@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+	private void initSoundPoolInstanceForOlder(SoundPool sp, int streamCount) {
+		soundPool = new SoundPool(streamCount, AudioManager.STREAM_MUSIC, 0);
+	}
+
+	/**
+	 * 2015/05/30 by Kawamura
+	 * Create SoundPool instance for LOLIPOP or later.
+	 */
+	@SuppressWarnings("deprecation")
+	private void initSoundPoolInstanceForRecent(SoundPool sp, int streamCount) {
+		soundPool = createSoundPoolForRecent(soundPool, STREAM_COUNT);
 	}
 
     public void onAudioFocusChange(int focusChange) {
@@ -411,6 +488,9 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
     public void onPause(boolean multitasking) {
         super.onPause(multitasking);
 
+        // Pause all SoundPool
+        soundPool.autoPause();
+
         for (HashMap.Entry<String, NativeAudioAsset> entry : assetMap.entrySet()) {
             NativeAudioAsset asset = entry.getValue();
             boolean wasPlaying = asset.pause();
@@ -423,6 +503,10 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
     @Override
     public void onResume(boolean multitasking) {
         super.onResume(multitasking);
+
+        // Resume all SoundPool
+        soundPool.autoResume();
+
         while (!resumeList.isEmpty()) {
             NativeAudioAsset asset = resumeList.remove(0);
             asset.resume();
