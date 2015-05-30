@@ -27,7 +27,6 @@ import android.media.SoundPool;
 import android.media.SoundPool.OnLoadCompleteListener;
 import android.media.SoundPool.Builder;
 import android.media.AudioAttributes;
-import android.media.AudioAttributes.Builder;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -110,7 +109,7 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
     public void onLoadComplete (SoundPool soundPool, int sampleId, int status) {
     	// success
     	if (status == 0 && waitingMap.containsKey(sampleId)) {
-    		String audioKey = waitingMap.getString(sampleId);
+    		String audioKey = (String) waitingMap.get(sampleId);
     		soundMap.put(audioKey, sampleId);
     		synchronized (waitingMap) {
     			waitingMap.remove(sampleId);
