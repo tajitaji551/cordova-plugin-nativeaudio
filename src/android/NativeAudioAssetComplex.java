@@ -15,9 +15,10 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnPreparedListener;
+import android.media.MediaPlayer.OnErrorListener;
 import android.os.Handler;
 
-public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletionListener {
+public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletionListener, OnErrorListener {
 
 	private static final int INVALID = 0;
 	private static final int PREPARED = 1;
@@ -36,6 +37,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 		mp = new MediaPlayer();
         mp.setOnCompletionListener(this);
         mp.setOnPreparedListener(this);
+        mp.setOnErrorListener(this);
 		mp.setDataSource( afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
 		mp.setAudioStreamType(AudioManager.STREAM_MUSIC); 
 		mp.setVolume(volume, volume);
@@ -132,7 +134,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 		{
 			if ( mp.isLooping() || mp.isPlaying() )
 			{
-				state = PREPARED;
+				state = INVALID;
 				mp.pause();
 				mp.seekTo(0);
             }
@@ -193,7 +195,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	{
 		if (state != LOOPING)
 		{
-			this.state = PREPARED;
+			this.state = INVALID;
 			try {
 				this.stop();
                 completeCallback.call();
@@ -203,5 +205,10 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public boolean onError(MediaPlayer mPlayer, int what, int extra) {
+		System.out.println("MediaPlayer onError:what=" + what + " extra=" + extra);
+		return true;
 	}
 }

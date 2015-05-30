@@ -23,6 +23,7 @@ import android.media.AudioManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.os.HandlerThread;
+import android.media.SoundPool.OnLoadCompleteListener;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -31,7 +32,8 @@ import org.apache.cordova.PluginResult.Status;
 import org.json.JSONObject;
 
 
-public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFocusChangeListener {
+public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFocusChangeListener,
+	SoundPool.OnLoadCompleteListener {
 
 	public static final String ERROR_NO_AUDIOID="A reference does not exist for the specified audio id.";
 	public static final String ERROR_AUDIOID_EXISTS="A reference already exists for the specified audio id.";
@@ -50,14 +52,71 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 	private static HashMap<String, NativeAudioAsset> assetMap;
     private static ArrayList<NativeAudioAsset> resumeList;
     private static HashMap<String, CallbackContext> completeCallbacks;
+    private static HashMap<String, Integer> soundMap;
+    private static HashMap<Integer, String> waitingMap; // 読み込み待ち
+    private static SoundPool soundPool;
     public static HandlerThread stopThread = new HandlerThread("STOP-AUDIO-THREAD");
+
+    // preloadSimple
+    private PluginResult execPreloadSimple(JSONArray data) {
+    	String audioID;
+    	try {
+    		audioID = data.getString(0);
+    		if (!soundMap.containsKey(audioID)) {
+    			String assetPath = data.getString(1);
+    			Log.d(LOGTAG, "preloadSimple - " + audioID + ": " + assetPath);
+
+				double volume;
+				if (data.length() <= 2) {
+					volume = 1.0;
+				} else {
+					volume = data.getDouble(2);
+				}
+
+				int voices;
+				if (data.length() <= 3) {
+					voices = 1;
+				} else {
+					voices = data.getInt(3);
+				}
+
+                // ファイルが存在するならフルパスで指定
+                File file = new File(assetPath);
+                if (!file.exists()) {
+                	if (assetPath.indexOf("./") >= 0) {
+                		assetPath = assetPath.replace("./", "");
+                	}
+                    assetPath = "www/".concat(assetPath);
+                }
+                int id = soundPool.load(assetPath, 0);
+                waitingMap.put(id, audioID); // waiting loading. if load success replace by soundId
+                file = null;
+
+				return new PluginResult(Status.OK);
+    		} else {
+				return new PluginResult(Status.ERROR, ERROR_AUDIOID_EXISTS);
+			}
+    	} catch (JSONException e) {
+			return new PluginResult(Status.ERROR, e.toString());
+		} catch (IOException e) {
+			return new PluginResult(Status.ERROR, e.toString());
+		}		
+    }
+
+    public void onLoadComplete (SoundPool soundPool, int sampleId, int status) {
+    	// success
+    	if (status == 0 && waitingMap.containsKey(sampleId)) {
+    		String audioKey = waitingMap.getString(sampleId);
+    		soundMap.put(audioKey, sampleId);
+    		synchronized (waitingMap) {
+    			waitingMap.remove(sampleId);
+    		}
+    	}
+    }
 
 	private PluginResult executePreload(JSONArray data) {
 		String audioID;
 		try {
-			if (!stopThread.isAlive()) {
-				stopThread.start();
-			}
 			audioID = data.getString(0);
 			if (!assetMap.containsKey(audioID)) {
 				String assetPath = data.getString(1);
@@ -94,6 +153,7 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
                     asset = new NativeAudioAsset(assetPath, voices, (float)volume);
                 }
                 if (asset != null) assetMap.put(audioID, asset);
+                file = null;
 
 				return new PluginResult(Status.OK);
 			} else {
@@ -133,7 +193,16 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
                         }
                     });
 			} else {
-				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+				// soundMapを検索
+				if (soundMap.containsKey(audioID)) {
+					int status = soundPool.play(soundMap.getInt(audioID), 1.0f, 1.0f, 5, 0, 1.0f);
+					// status == 0 is fail
+					if (start == 0) {
+						return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+					}
+				} else {
+					return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+				}
 			}
 		} catch (JSONException e) {
 			return new PluginResult(Status.ERROR, e.toString());
@@ -168,7 +237,14 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 		try {
 			audioID = data.getString(0);
 			Log.d( LOGTAG, "unload - " + audioID );
-			
+			// SoundPoolに入っている場合
+			if (soundMap.containsKey(audioID)) {
+				if (!soundPool.unload(soundMap.getInt(audioID))) {
+					return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+				}
+			} else {
+				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
+			}
 			if (assetMap.containsKey(audioID)) {
 				NativeAudioAsset asset = assetMap.get(audioID);
 				asset.unload();
@@ -230,7 +306,8 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			if (PRELOAD_SIMPLE.equals(action)) {
 				cordova.getThreadPool().execute(new Runnable() {
 		            public void run() {
-		            	callbackContext.sendPluginResult( executePreload(data) );
+//		            	callbackContext.sendPluginResult( executePreload(data) );
+		            	callbackContext.sendPluginResult(execPreloadSimple(data));
 		            }
 		        });				
 				
@@ -296,9 +373,25 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			assetMap = new HashMap<String, NativeAudioAsset>();
 		}
 
+		// soundMap init
+		if (soundMap == null) {
+			soundMap = new HashMap<String, Integer>();
+			waitingMap = new HashMap<Integer, String>();
+			soundPool = new SoundPool.Builder().setMaxStreams(10)
+							.setAudioAttributes(new AudioAttributes.Builder()
+								.setUsage(AudioAttributes.USAGE_GAME)
+								.build())
+							.build();
+		}
+
         if (resumeList == null) {
             resumeList = new ArrayList<NativeAudioAsset>();
         }
+
+        // init Stop thred
+		if (!stopThread.isAlive()) {
+			stopThread.start();
+		}
 	}
 
     public void onAudioFocusChange(int focusChange) {
