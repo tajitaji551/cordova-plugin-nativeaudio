@@ -199,9 +199,9 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			} else {
 				// soundMapを検索
 				if (soundMap.containsKey(audioID)) {
-					int status = soundPool.play(soundMap.getInt(audioID), 1.0f, 1.0f, 5, 0, 1.0f);
+					int status = soundPool.play((int) soundMap.get(audioID), 1.0f, 1.0f, 5, 0, 1.0f);
 					// status == 0 is fail
-					if (start == 0) {
+					if (status == 0) {
 						return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
 					}
 				} else {
@@ -243,7 +243,7 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 			Log.d( LOGTAG, "unload - " + audioID );
 			// SoundPoolに入っている場合
 			if (soundMap.containsKey(audioID)) {
-				if (!soundPool.unload(soundMap.getInt(audioID))) {
+				if (!soundPool.unload((int) soundMap.get(audioID))) {
 					return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
 				}
 			} else {
