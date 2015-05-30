@@ -23,7 +23,11 @@ import android.media.AudioManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.os.HandlerThread;
+import android.media.SoundPool;
 import android.media.SoundPool.OnLoadCompleteListener;
+import android.media.SoundPool.Builder;
+import android.media.AudioAttributes;
+import android.media.AudioAttributes.Builder;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
