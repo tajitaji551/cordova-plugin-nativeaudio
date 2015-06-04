@@ -93,6 +93,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 		{
 			state = (loop ? PENDING_LOOP : PENDING_PLAY);
 			mp.setLooping(loop);
+			mp.seekTo((int) (startTime * 1000));
 			mp.start();
 		}
         // duration後に停止
