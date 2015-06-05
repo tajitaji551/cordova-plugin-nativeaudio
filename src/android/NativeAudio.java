@@ -273,10 +273,7 @@ public class NativeAudio extends CordovaPlugin implements AudioManager.OnAudioFo
 				synchronized (soundMap) {
 					soundMap.remove(audioID);
 				}
-			} else {
-				return new PluginResult(Status.ERROR, ERROR_NO_AUDIOID);
-			}
-			if (assetMap.containsKey(audioID)) {
+			} else if (assetMap.containsKey(audioID)) {
 				NativeAudioAsset asset = assetMap.get(audioID);
 				asset.unload();
 				assetMap.remove(audioID);
