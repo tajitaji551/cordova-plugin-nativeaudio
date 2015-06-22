@@ -32,7 +32,8 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
     Callable<Void> completeCallback;
     private float startTime = 0;
     private float duration = 1;
-
+    private int playCounter = 0;
+    
 	public NativeAudioAssetComplex( AssetFileDescriptor afd, float volume)  throws IOException
 	{
 		state = INVALID;
@@ -75,6 +76,11 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         completeCallback = completeCb;
         this.startTime = startTime;
         this.duration = duration;
+        if ((this.playCounter + 1) < Integer.MAX_VALUE) {
+	        this.playCounter++;
+        } else {
+        	this.playCounter = 0;
+        }
         invokePlay(startTime, duration, false);
     }
 	
@@ -103,8 +109,13 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         // duration後に停止
         if (duration > 0) {
 	        new Handler(NativeAudio.stopThread.getLooper()).postDelayed(new Runnable() {
+	        	private int myCounter = playCounter;
 	            public void run() {
-	                pause();
+	            	if (this.forStopCounterNo == this.playCounter) {
+						if (myCounter == playCounter) {
+			                pause();
+			            }
+	            	}
 	            }
 	        }, (long) (duration * 1000));
     	}
@@ -117,7 +128,6 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
             if ( mp.isLooping() || mp.isPlaying() )
             {
                 mp.pause();
-                mp.seekTo(0);
                 return true;
             }
         }
@@ -141,7 +151,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 			{
 				state = INVALID;
 				mp.pause();
-				mp.seekTo(0);
+				mp.seekTo((int) (startTime * 1000));
             }
 		}
         catch (IllegalStateException e)
