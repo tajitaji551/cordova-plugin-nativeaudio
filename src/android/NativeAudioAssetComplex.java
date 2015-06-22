@@ -30,6 +30,8 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	private MediaPlayer mp;
 	private int state;
     Callable<Void> completeCallback;
+    private float startTime = 0;
+    private float duration = 1;
 
 	public NativeAudioAssetComplex( AssetFileDescriptor afd, float volume)  throws IOException
 	{
@@ -71,6 +73,8 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
      */
     public void play(float startTime, float duration, Callable<Void> completeCb) throws IOException {
         completeCallback = completeCb;
+        this.startTime = startTime;
+        this.duration = duration;
         invokePlay(startTime, duration, false);
     }
 	
@@ -174,14 +178,14 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 		if (state == PENDING_PLAY) 
 		{
 			mp.setLooping(false);
-			mp.seekTo(0);
+			mp.seekTo((int) (startTime * 1000));
 			mp.start();
 			state = PLAYING;
 		}
 		else if ( state == PENDING_LOOP )
 		{
 			mp.setLooping(true);
-			mp.seekTo(0);
+			mp.seekTo((int) (startTime * 1000));
 			mp.start();
 			state = LOOPING;
 		}
