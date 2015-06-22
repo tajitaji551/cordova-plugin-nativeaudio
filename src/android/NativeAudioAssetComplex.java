@@ -33,7 +33,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
     private float startTime = 0;
     private float duration = 1;
     private int playCounter = 0;
-    
+
 	public NativeAudioAssetComplex( AssetFileDescriptor afd, float volume)  throws IOException
 	{
 		state = INVALID;
@@ -111,11 +111,9 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	        new Handler(NativeAudio.stopThread.getLooper()).postDelayed(new Runnable() {
 	        	private int myCounter = playCounter;
 	            public void run() {
-	            	if (this.forStopCounterNo == this.playCounter) {
-						if (myCounter == playCounter) {
-			                pause();
-			            }
-	            	}
+					if (myCounter == playCounter) {
+		                pause();
+		            }
 	            }
 	        }, (long) (duration * 1000));
     	}
