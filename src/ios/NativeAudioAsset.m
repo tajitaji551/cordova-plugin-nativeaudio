@@ -17,6 +17,7 @@ static const CGFloat FADE_DELAY = 0.08;
 {
     self = [super init];
     if(self) {
+        playCounter = 0;
         voices = [[NSMutableArray alloc] init];  
         
         NSURL *pathURL = [NSURL fileURLWithPath : path];
@@ -46,6 +47,12 @@ static const CGFloat FADE_DELAY = 0.08;
 
 - (void)play:(NSNumber *)startTime duration:(NSNumber *)duration
 {
+    if ((playCounter + 1) > INT_MAX) {
+        playCounter = 0;
+    } else {
+        playCounter++;
+    }
+
     AVAudioPlayer * player = [voices objectAtIndex:playIndex];
     // if isPlayer==YES then stop
     if (player.isPlaying) {
@@ -56,17 +63,24 @@ static const CGFloat FADE_DELAY = 0.08;
     player.numberOfLoops = 0;
     [player play];
     // stop after duration time
-    if (duration.floatValue > 0.0f) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration.floatValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if (player.isPlaying) {
-                [player stop];
-            }
-        });
-    }
+    [self autoStop:player duration:duration counter:playCounter];
+
     playIndex += 1;
     playIndex = playIndex % [voices count];
 }
 
+- (void)autoStop:(AVAudioPlayer *)player duration:(NSNumber *)duration counter:(int)counter
+{
+    int myCounter = counter;
+    if (duration.floatValue > 0.0f) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration.floatValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            NSLog(@"myCounter %d", myCounter);
+            if (player.isPlaying && myCounter == playCounter) {
+                [player stop];
+            }
+        });
+    }
+}
 
 // The volume is increased repeatedly by the fade step amount until the last step where the audio is stopped.
 // The delay determines how fast the decrease happens
