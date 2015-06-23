@@ -74,7 +74,6 @@ static const CGFloat FADE_DELAY = 0.08;
     int myCounter = counter;
     if (duration.floatValue > 0.0f) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration.floatValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            NSLog(@"myCounter %d", myCounter);
             if (player.isPlaying && myCounter == playCounter) {
                 [player stop];
             }
