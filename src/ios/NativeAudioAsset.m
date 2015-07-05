@@ -1,5 +1,5 @@
 //
-// 
+//
 //  NativeAudioAsset.m
 //  NativeAudioAsset
 //
@@ -18,17 +18,17 @@ static const CGFloat FADE_DELAY = 0.08;
     self = [super init];
     if(self) {
         playCounter = 0;
-        voices = [[NSMutableArray alloc] init];  
-        
+        voices = [[NSMutableArray alloc] init];
+
         NSURL *pathURL = [NSURL fileURLWithPath : path];
-        
+
         for (int x = 0; x < [numVoices intValue]; x++) {
             AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:pathURL error: NULL];
             player.volume = volume.floatValue;
             [player prepareToPlay];
             [voices addObject:player];
             [player setDelegate:self];
-            
+
             if(delay)
             {
                 fadeDelay = delay;
@@ -36,16 +36,16 @@ static const CGFloat FADE_DELAY = 0.08;
             else {
                 fadeDelay = [NSNumber numberWithFloat:FADE_DELAY];
             }
-            
+
             initialVolume = volume;
         }
-        
+
         playIndex = 0;
     }
     return(self);
 }
 
-- (void)play:(NSNumber *)startTime duration:(NSNumber *)duration
+- (void)play:(NSNumber *)startTime duration:(NSNumber *)duration rate:(NSNumber *)rate
 {
     if ((playCounter + 1) > INT_MAX) {
         playCounter = 0;
@@ -58,6 +58,9 @@ static const CGFloat FADE_DELAY = 0.08;
     if (player.isPlaying) {
         [player stop];
     }
+    // set rate
+    player.enableRate = YES;
+    player.rate = rate.doubleValue;
     // set currentTime to startTime
     [player setCurrentTime:startTime.doubleValue];
     player.numberOfLoops = 0;
@@ -86,7 +89,7 @@ static const CGFloat FADE_DELAY = 0.08;
 - (void)playWithFade
 {
     AVAudioPlayer * player = [voices objectAtIndex:playIndex];
-    
+
     if (!player.isPlaying)
     {
         [player setCurrentTime:0.0];
@@ -120,10 +123,10 @@ static const CGFloat FADE_DELAY = 0.08;
 - (void)stopWithFade
 {
     BOOL shouldContinue = NO;
-    
+
     for (int x = 0; x < [voices count]; x++) {
         AVAudioPlayer * player = [voices objectAtIndex:x];
-        
+
         if (player.isPlaying && player.volume > FADE_STEP) {
             player.volume -= FADE_STEP;
             shouldContinue = YES;
@@ -134,7 +137,7 @@ static const CGFloat FADE_DELAY = 0.08;
             player.currentTime = 0;
         }
     }
-    
+
     if(shouldContinue) {
         [self performSelector:@selector(stopWithFade) withObject:nil afterDelay:fadeDelay.floatValue];
     }
@@ -151,7 +154,7 @@ static const CGFloat FADE_DELAY = 0.08;
     playIndex = playIndex % [voices count];
 }
 
-- (void) unload 
+- (void) unload
 {
     [self stop];
     for (int x = 0; x < [voices count]; x++) {
