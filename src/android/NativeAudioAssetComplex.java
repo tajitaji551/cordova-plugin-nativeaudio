@@ -64,7 +64,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	public void play(Callable<Void> completeCb) throws IOException
 	{
         completeCallback = completeCb;
-		invokePlay(0f, 1f, false);
+		invokePlay(0f, 1f, 1f, false);
 	}
 
     /**
