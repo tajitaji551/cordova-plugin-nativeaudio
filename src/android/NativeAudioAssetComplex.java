@@ -26,7 +26,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 	private static final int PLAYING = 3;
 	private static final int PENDING_LOOP = 4;
 	private static final int LOOPING = 5;
-	
+
 	private MediaPlayer mp;
 	private int state;
     Callable<Void> completeCallback;
@@ -42,11 +42,11 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         mp.setOnPreparedListener(this);
         mp.setOnErrorListener(this);
 		mp.setDataSource( afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-		mp.setAudioStreamType(AudioManager.STREAM_MUSIC); 
+		mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
 		mp.setVolume(volume, volume);
 		mp.prepare();
 	}
-    
+
     /**
      * リソース直指定用
      */
@@ -60,19 +60,20 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         mp.setVolume(volume, volume);
         mp.prepare();
     }
-	
+
 	public void play(Callable<Void> completeCb) throws IOException
 	{
         completeCallback = completeCb;
 		invokePlay(0f, 1f, false);
 	}
-    
+
     /**
      * 再生開始時間と再生時間指定
      * @param startTime millis
      * @param duration millis
+     * @param rate float
      */
-    public void play(float startTime, float duration, Callable<Void> completeCb) throws IOException {
+    public void play(float startTime, float duration, float rate, Callable<Void> completeCb) throws IOException {
         completeCallback = completeCb;
         this.startTime = startTime;
         this.duration = duration;
@@ -81,10 +82,10 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         } else {
         	this.playCounter = 0;
         }
-        invokePlay(startTime, duration, false);
+        invokePlay(startTime, duration, rate, false);
     }
-	
-	private void invokePlay(float startTime, float duration, Boolean loop)
+
+	private void invokePlay(float startTime, float duration, float rate, Boolean loop)
 	{
 		Boolean playing = ( mp.isLooping() || mp.isPlaying() );
 		if ( playing )
@@ -158,7 +159,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
         }
 	}
 
-	public void setVolume(float volume) 
+	public void setVolume(float volume)
 	{
         try
         {
@@ -169,21 +170,21 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
             // I don't know why this gets thrown; catch here to save app
 		}
 	}
-	
+
 	public void loop() throws IOException
 	{
 		invokePlay(0, 1, true);
 	}
-	
+
 	public void unload() throws IOException
 	{
 		this.stop();
 		mp.release();
 	}
-	
-	public void onPrepared(MediaPlayer mPlayer) 
+
+	public void onPrepared(MediaPlayer mPlayer)
 	{
-		if (state == PENDING_PLAY) 
+		if (state == PENDING_PLAY)
 		{
 			mp.setLooping(false);
 			mp.seekTo((int) (startTime * 1000));
@@ -203,7 +204,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 			mp.seekTo(0);
 		}
 	}
-	
+
 	public void onCompletion(MediaPlayer mPlayer)
 	{
 		if (state != LOOPING)

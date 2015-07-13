@@ -18,21 +18,21 @@ public class NativeAudioAsset
 
 	private ArrayList<NativeAudioAssetComplex> voices;
 	private int playIndex = 0;
-	
+
 	public NativeAudioAsset(AssetFileDescriptor afd, int numVoices, float volume) throws IOException
 	{
 		voices = new ArrayList<NativeAudioAssetComplex>();
-		
+
 		if ( numVoices < 0 )
 			numVoices = 1;
-		
-		for ( int x=0; x<numVoices; x++) 
+
+		for ( int x=0; x<numVoices; x++)
 		{
 			NativeAudioAssetComplex voice = new NativeAudioAssetComplex(afd, volume);
 			voices.add( voice );
 		}
 	}
-    
+
     /**
      * フルパス指定
      * @param path フルパス指定
@@ -40,21 +40,21 @@ public class NativeAudioAsset
     public NativeAudioAsset(String path, int numVoices, float volume) throws IOException
     {
         voices = new ArrayList<NativeAudioAssetComplex>();
-        
+
         if ( numVoices < 0 )
             numVoices = 1;
-        
+
         for ( int x=0; x<numVoices; x++)
         {
             NativeAudioAssetComplex voice = new NativeAudioAssetComplex(path, volume);
             voices.add( voice );
         }
     }
-	
-	public void play(float startTime, float duration, Callable<Void> completeCb) throws IOException
+
+	public void play(float startTime, float duration, float rate, Callable<Void> completeCb) throws IOException
 	{
 		NativeAudioAssetComplex voice = voices.get(playIndex);
-		voice.play(startTime, duration, completeCb);
+		voice.play(startTime, duration, rate, completeCb);
 		playIndex++;
 		playIndex = playIndex % voices.size();
 	}
@@ -82,13 +82,13 @@ public class NativeAudioAsset
 
     public void stop()
 	{
-		for ( int x=0; x<voices.size(); x++) 
+		for ( int x=0; x<voices.size(); x++)
 		{
 			NativeAudioAssetComplex voice = voices.get(x);
 			voice.stop();
 		}
 	}
-	
+
 	public void loop() throws IOException
 	{
 		NativeAudioAssetComplex voice = voices.get(playIndex);
@@ -96,18 +96,18 @@ public class NativeAudioAsset
 		playIndex++;
 		playIndex = playIndex % voices.size();
 	}
-	
+
 	public void unload() throws IOException
 	{
 		this.stop();
-		for ( int x=0; x<voices.size(); x++) 
+		for ( int x=0; x<voices.size(); x++)
 		{
 			NativeAudioAssetComplex voice = voices.get(x);
 			voice.unload();
 		}
 		voices.removeAll(voices);
 	}
-	
+
 	public void setVolume(float volume)
 	{
 		for (int x = 0; x < voices.size(); x++)
