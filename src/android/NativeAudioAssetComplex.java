@@ -173,7 +173,7 @@ public class NativeAudioAssetComplex implements OnPreparedListener, OnCompletion
 
 	public void loop() throws IOException
 	{
-		invokePlay(0, 1, true);
+		invokePlay(0, 1, 1, true);
 	}
 
 	public void unload() throws IOException
